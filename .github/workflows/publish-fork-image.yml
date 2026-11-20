@@ -30,24 +30,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
-      - name: Show OIDC subject for role setup
-        run: |
-          python3 - <<'PY'
-          import base64
-          import json
-          import os
-          import urllib.request
-
-          request = urllib.request.Request(
-              os.environ['ACTIONS_ID_TOKEN_REQUEST_URL'] + '&audience=sts.amazonaws.com',
-              headers={'Authorization': 'Bearer ' + os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']},
-          )
-          with urllib.request.urlopen(request) as response:
-              token = json.load(response)['value']
-          claims = json.loads(base64.urlsafe_b64decode(token.split('.')[1] + '==='))
-          print(json.dumps({'sub': claims['sub'], 'aud': claims['aud']}))
-          PY
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
