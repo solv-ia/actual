@@ -1,0 +1,4 @@
+.env
+actual-data/
+caddy-data/
+caddy-config/
