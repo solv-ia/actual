@@ -1,0 +1,4 @@
+{$ACTUAL_HOSTNAME} {
+    encode gzip zstd
+    reverse_proxy actual:5006
+}
