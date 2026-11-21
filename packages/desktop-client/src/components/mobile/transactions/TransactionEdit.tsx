@@ -1549,6 +1549,26 @@ const TransactionEditInner = memo<TransactionEditInnerProps>(
             <NoteTagAutocomplete inputRef={noteRef} />
           </View>
 
+          {!isAdding && !transaction.is_child && (
+            <View style={{ alignItems: 'flex-start' }}>
+              <Button
+                variant="normal"
+                onPress={() =>
+                  dispatch(
+                    pushModal({
+                      modal: {
+                        name: 'htech_receipts',
+                        options: { transactionId: transaction.id },
+                      },
+                    }),
+                  )
+                }
+              >
+                <Trans>Receipts</Trans>
+              </Button>
+            </View>
+          )}
+
           {!isAdding && (
             <View style={{ alignItems: 'center' }}>
               <Button
