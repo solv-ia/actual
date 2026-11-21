@@ -342,7 +342,7 @@ export function HtechItemsPage() {
               style={{
                 width: '100%',
                 borderCollapse: 'collapse',
-                minWidth: 760,
+                minWidth: 860,
               }}
             >
               <thead>
@@ -387,6 +387,12 @@ export function HtechItemsPage() {
                     scope="col"
                     style={{ ...htech_cellStyle, textAlign: 'right' }}
                   >
+                    <Trans>Unit price</Trans>
+                  </th>
+                  <th
+                    scope="col"
+                    style={{ ...htech_cellStyle, textAlign: 'right' }}
+                  >
                     <Trans>Discount</Trans>
                   </th>
                   <th
@@ -425,6 +431,18 @@ export function HtechItemsPage() {
                     <td style={htech_cellStyle}>{item.barcode ?? '—'}</td>
                     <td style={{ ...htech_cellStyle, textAlign: 'right' }}>
                       {item.quantity ?? '—'}
+                    </td>
+                    <td style={{ ...htech_cellStyle, textAlign: 'right' }}>
+                      {item.unit_price_cents === null ? (
+                        '—'
+                      ) : (
+                        <>
+                          <FinancialText>
+                            {integerToCurrency(item.unit_price_cents)}
+                          </FinancialText>
+                          {item.unit && `/${item.unit}`}
+                        </>
+                      )}
                     </td>
                     <td style={{ ...htech_cellStyle, textAlign: 'right' }}>
                       <FinancialText>
