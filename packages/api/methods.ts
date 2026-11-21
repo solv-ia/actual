@@ -14,6 +14,12 @@ import type { ImportableBudgetType } from '@actual-app/core/server/importers/ind
 import type { Query } from '@actual-app/core/shared/query';
 import type { ImportTransactionsOpts } from '@actual-app/core/types/api-handlers';
 import type {
+  htech_Product,
+  htech_ProductBarcode,
+  htech_ReceiptGroup,
+  htech_SaveReceipt,
+} from '@actual-app/core/types/htech_receipts';
+import type {
   DashboardPageEntity,
   DashboardWidgetEntity,
   ImportTransactionEntity,
@@ -25,6 +31,50 @@ import type { SyncedPrefs } from '@actual-app/core/types/prefs';
 import type { EverythingButIdOptional } from '@actual-app/core/types/util';
 
 export { q } from './app/query';
+
+export function htech_getReceiptGroups() {
+  return send('htech_receipt_groups_list');
+}
+
+export function htech_getPurchasedItems() {
+  return send('htech_receipts_items_list');
+}
+
+export function htech_saveReceiptGroup(group: htech_ReceiptGroup) {
+  return send('htech_receipt_groups_save', group);
+}
+
+export function htech_getProducts() {
+  return send('htech_products_list');
+}
+
+export function htech_saveProduct(product: htech_Product) {
+  return send('htech_products_save', product);
+}
+
+export function htech_getProductBarcodes() {
+  return send('htech_product_barcodes_list');
+}
+
+export function htech_saveProductBarcode(barcode: htech_ProductBarcode) {
+  return send('htech_product_barcodes_save', barcode);
+}
+
+export function htech_saveReceipt(receipt: htech_SaveReceipt) {
+  return send('htech_receipts_save', receipt);
+}
+
+export function htech_deleteReceipt(id: string) {
+  return send('htech_receipts_delete', { id });
+}
+
+export function htech_getReceiptsForTransaction(transaction_id: string) {
+  return send('htech_receipts_for_transaction', { transaction_id });
+}
+
+export function htech_getProductPriceHistory(product_id: string) {
+  return send('htech_receipts_product_history', { product_id });
+}
 
 export async function runImport(
   budgetName: APIFileEntity['name'],

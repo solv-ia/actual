@@ -53,6 +53,7 @@ import { GoalTemplateModal } from './modals/GoalTemplateModal';
 import { GoCardlessExternalMsgModal } from './modals/GoCardlessExternalMsgModal';
 import { GoCardlessInitialiseModal } from './modals/GoCardlessInitialiseModal';
 import { HoldBufferModal } from './modals/HoldBufferModal';
+import { HtechReceiptsModal } from './modals/htech_ReceiptsModal';
 import { ImportTransactionsModal } from './modals/ImportTransactionsModal';
 import { KeyboardShortcutModal } from './modals/KeyboardShortcutModal';
 import { LoadBackupModal } from './modals/LoadBackupModal';
@@ -325,6 +326,9 @@ export function Modals() {
 
         case 'notes':
           return <NotesModal key={key} {...modal.options} />;
+
+        case 'htech_receipts':
+          return <HtechReceiptsModal key={key} {...modal.options} />;
 
         case 'envelope-balance-menu':
           return (

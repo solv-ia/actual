@@ -187,6 +187,20 @@ export function useTransactionRowContextActions({
 
   const transactionActions: ContextMenuItem[] = [
     {
+      name: 'htech_receipts',
+      text: t('Receipts'),
+      onClick: () =>
+        dispatch(
+          pushModal({
+            modal: {
+              name: 'htech_receipts',
+              options: { transactionId: selectedIds[0] },
+            },
+          }),
+        ),
+      hidden: selectedIds.length !== 1 || transaction.is_child,
+    },
+    {
       name: 'duplicate',
       text: t('Duplicate'),
       onClick: () => onDuplicate(selectedIds),
