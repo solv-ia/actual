@@ -30,6 +30,7 @@ import { ContextMenu } from './ContextMenu';
 import { EnableBankingCallback } from './EnableBankingCallback';
 import { FeatureErrorFallback } from './FeatureErrorFallback';
 import { GlobalKeys } from './GlobalKeys';
+import { HtechItemsPage } from './htech_items/htech_ItemsPage';
 import { HtechLoansPage } from './htech_loans/htech_LoansPage';
 import { MobileBankSyncAccountEditPage } from './mobile/banksync/MobileBankSyncAccountEditPage';
 import { MobileNavTabs } from './mobile/MobileNavTabs';
@@ -281,6 +282,18 @@ export function FinancesApp() {
                     <Route path="/reports/*" element={<Reports />} />
 
                     <Route path="/htech_loans" element={<HtechLoansPage />} />
+
+                    <Route
+                      path="/htech_items"
+                      element={
+                        <ErrorBoundary
+                          FallbackComponent={FeatureErrorFallback}
+                          resetKeys={[location.pathname]}
+                        >
+                          <HtechItemsPage />
+                        </ErrorBoundary>
+                      }
+                    />
 
                     <Route
                       path="/budget"

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SvgCog } from '@actual-app/components/icons/v1';
+import { SvgCog, SvgShoppingCart } from '@actual-app/components/icons/v1';
 import { View } from '@actual-app/components/view';
 
 import { useSidebarMenu } from '#hooks/useSidebarMenu';
@@ -25,6 +25,11 @@ export function PrimaryButtons() {
           to={getSidebarMenuItemPath(item.id, true)}
         />
       ))}
+      <Item
+        title={t('Purchased items')}
+        Icon={SvgShoppingCart}
+        to="/htech_items"
+      />
       <Item title={t('Settings')} Icon={SvgCog} to="/settings" />
     </View>
   );
