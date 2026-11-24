@@ -9,6 +9,7 @@ import type { EncryptionHandlers } from '#server/encryption/app';
 import type { FiltersHandlers } from '#server/filters/app';
 import type { ForecastHandlers } from '#server/forecast/app';
 import type { FormulasHandlers } from '#server/formulas/app';
+import type { htech_ReceiptHandlers } from '#server/htech_receipts/app';
 import type { NotesHandlers } from '#server/notes/app';
 import type { PayeesHandlers } from '#server/payees/app';
 import type { PreferencesHandlers } from '#server/preferences/app';
@@ -31,6 +32,7 @@ export type Handlers = {} & ServerHandlers &
   DashboardHandlers &
   FiltersHandlers &
   FormulasHandlers &
+  htech_ReceiptHandlers &
   ForecastHandlers &
   NotesHandlers &
   PreferencesHandlers &

@@ -25,6 +25,7 @@ import { DocumentDirError, withErrorCode } from './errors';
 import { app as filtersApp } from './filters/app';
 import { app as forecastApp } from './forecast/app';
 import { app as formulasApp } from './formulas/app';
+import { htech_app } from './htech_receipts/app';
 import { app } from './main-app';
 import { mutator, runHandler } from './mutators';
 import { app as notesApp } from './notes/app';
@@ -141,6 +142,7 @@ app.combine(
   toolsApp,
   filtersApp,
   formulasApp,
+  htech_app,
   forecastApp,
   reportsApp,
   rulesApp,

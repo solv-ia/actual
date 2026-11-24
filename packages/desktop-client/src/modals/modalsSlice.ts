@@ -475,6 +475,10 @@ export type Modal =
       };
     }
   | {
+      name: 'htech_receipts';
+      options: { transactionId: string };
+    }
+  | {
       name: 'tracking-budget-summary';
       options: { month: string };
     }
