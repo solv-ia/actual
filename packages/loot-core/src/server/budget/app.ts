@@ -21,7 +21,14 @@ import * as goalActions from './goal-template';
 import { sortCategories } from './sort-categories';
 import * as goalNoteActions from './template-notes';
 
+async function htech_getBudgetAmount(
+  args: Parameters<typeof actions.getBudget>[0],
+) {
+  return actions.getBudget(args);
+}
+
 export type BudgetHandlers = {
+  'htech_budget/get-amount': typeof htech_getBudgetAmount;
   'budget/budget-amount': typeof actions.setBudget;
   'budget/copy-previous-month': typeof actions.copyPreviousMonth;
   'budget/copy-single-month': typeof actions.copySinglePreviousMonth;
@@ -71,6 +78,7 @@ export type BudgetHandlers = {
 
 export const app = createApp<BudgetHandlers>();
 
+app.method('htech_budget/get-amount', htech_getBudgetAmount);
 app.method('budget/budget-amount', mutator(undoable(actions.setBudget)));
 app.method(
   'budget/copy-previous-month',

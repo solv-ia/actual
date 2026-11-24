@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   SvgLibrary,
+  SvgMoneyBag,
   SvgReports,
   SvgTag,
   SvgTuning,
@@ -28,6 +29,7 @@ export function useSidebarMenuItemDetails(): Record<
 
   return {
     budget: { title: t('Budget'), Icon: SvgWallet },
+    htech_loans: { title: t('Loans'), Icon: SvgMoneyBag },
     reports: { title: t('Reports'), Icon: SvgReports },
     schedules: { title: t('Schedules'), Icon: SvgCalendar3 },
     payees: { title: t('Payees'), Icon: SvgUserGroup },

@@ -27,6 +27,7 @@ import { accountQueries } from '#accounts';
 import { resetApp, setAppState } from '#app/appSlice';
 import type { SelectLinkedAccountsModalProps } from '#components/modals/SelectLinkedAccountsModal';
 import type { TransactionTableColumn } from '#components/transactions/table/columns';
+import type { htech_LoanRecord } from '#htech_loanMath';
 import { createAppAsyncThunk } from '#redux';
 import { signOut } from '#users/usersSlice';
 
@@ -331,6 +332,15 @@ export type Modal =
       name: 'budget-summary';
       options: {
         month: string;
+      };
+    }
+  | {
+      name: 'htech_loan-planner';
+      options?: {
+        loan: htech_LoanRecord;
+        paid: number;
+        historicalPaid: number;
+        remaining: number;
       };
     }
   | {

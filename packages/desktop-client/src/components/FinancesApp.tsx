@@ -30,6 +30,7 @@ import { ContextMenu } from './ContextMenu';
 import { EnableBankingCallback } from './EnableBankingCallback';
 import { FeatureErrorFallback } from './FeatureErrorFallback';
 import { GlobalKeys } from './GlobalKeys';
+import { HtechLoansPage } from './htech_loans/htech_LoansPage';
 import { MobileBankSyncAccountEditPage } from './mobile/banksync/MobileBankSyncAccountEditPage';
 import { MobileNavTabs } from './mobile/MobileNavTabs';
 import { TransactionEdit } from './mobile/transactions/TransactionEdit';
@@ -278,6 +279,8 @@ export function FinancesApp() {
                     <Route path="/" element={<StartPageRedirect />} />
 
                     <Route path="/reports/*" element={<Reports />} />
+
+                    <Route path="/htech_loans" element={<HtechLoansPage />} />
 
                     <Route
                       path="/budget"
@@ -603,6 +606,7 @@ export function FinancesApp() {
                     element={<MobileNavTabs />}
                   />
                   <Route path="/schedules" element={<MobileNavTabs />} />
+                  <Route path="/htech_loans" element={<MobileNavTabs />} />
                   <Route path="*" element={null} />
                 </Routes>
               </MobilePageHeaderProvider>

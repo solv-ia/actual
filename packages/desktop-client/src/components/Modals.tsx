@@ -12,6 +12,7 @@ import { closeModal } from '#modals/modalsSlice';
 import { useDispatch } from '#redux';
 
 import { EditSyncAccount } from './banksync/EditSyncAccount';
+import { HtechLoanPlannerModal } from './htech_loans/htech_LoanPlannerModal';
 import { AccountAutocompleteModal } from './modals/AccountAutocompleteModal';
 import { AccountGroupsModal } from './modals/AccountGroupsModal';
 import { AccountMenuModal } from './modals/AccountMenuModal';
@@ -269,6 +270,9 @@ export function Modals() {
 
         case 'schedule-edit':
           return <ScheduleEditModal key={key} {...modal.options} />;
+
+        case 'htech_loan-planner':
+          return <HtechLoanPlannerModal key={key} {...modal.options} />;
 
         case 'schedule-link':
           return <ScheduleLink key={key} {...modal.options} />;
