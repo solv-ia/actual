@@ -31,6 +31,7 @@
     "#global-events": "./src/global-events.ts",
     "#enablebanking": "./src/enablebanking.ts",
     "#gocardless": "./src/gocardless.ts",
+    "#htech_loanMath": "./src/components/htech_loans/htech_loanMath.ts",
     "#i18n": "./src/i18n.ts",
     "#mocks": "./src/mocks.tsx",
     "#mocks/*": "./src/mocks/*.ts",

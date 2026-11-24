@@ -275,6 +275,14 @@ directory (e.g. `.claude/skills/impeccable/`) is missing, install it with
 
 ## Code Style & Conventions
 
+### Local feature namespace
+
+Prefix new local feature files, identifiers, and stored names with `htech_` so
+they do not collide with features added upstream by Actual. Keep user-facing
+labels clear and translated; the prefix is for internal names and IDs. React
+component names use `Htech` with PascalCase because JSX and the hooks linter
+require that form.
+
 ### TypeScript Guidelines
 
 **Type Usage:**

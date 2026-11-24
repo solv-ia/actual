@@ -49,7 +49,11 @@ describe('useSidebarMenu', () => {
   it('leaves a hidden reports page out of the sidebar', () => {
     const { sidebarItems } = renderSidebarMenu('/budget').current;
 
-    expect(sidebarItems.map(item => item.id)).toEqual(['budget', 'schedules']);
+    expect(sidebarItems.map(item => item.id)).toEqual([
+      'budget',
+      'htech_loans',
+      'schedules',
+    ]);
   });
 
   it('shows a hidden reports page in the sidebar while it is open', () => {
@@ -57,6 +61,7 @@ describe('useSidebarMenu', () => {
 
     expect(sidebarItems.map(item => item.id)).toEqual([
       'budget',
+      'htech_loans',
       'reports',
       'schedules',
     ]);
@@ -74,6 +79,7 @@ describe('useSidebarMenu', () => {
 
     expect(result.current.sidebarItems.map(item => item.id)).toEqual([
       'budget',
+      'htech_loans',
       'schedules',
     ]);
   });
