@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures';
 import { ConfigurationPage } from './page-models/configuration-page';
 import { Navigation } from './page-models/navigation';
+import { SettingsPage } from './page-models/settings-page';
 
 test('opens receipts from a transaction', async ({ page }) => {
   const configuration = new ConfigurationPage(page);
@@ -33,4 +34,24 @@ test('opens the purchased items page and its filters', async ({ page }) => {
   await page.getByRole('button', { name: 'Advanced filters' }).click();
   await expect(page.getByLabel('Barcode contains')).toBeVisible();
   await expect(page.getByRole('main')).toMatchThemeScreenshots();
+});
+
+test('shows purchased items with the redesigned sidebar', async ({ page }) => {
+  const configuration = new ConfigurationPage(page);
+  const settings = new SettingsPage(page);
+
+  await page.goto('/');
+  await configuration.createTestFile();
+  await page.getByRole('link', { name: 'Settings' }).click();
+  await settings.enableExperimentalFeature('Redesigned sidebar');
+
+  const purchasedItemsLink = page
+    .getByRole('navigation', { name: 'Sidebar' })
+    .getByRole('link', { name: 'Purchased items' });
+  await expect(purchasedItemsLink).toBeVisible();
+  await expect(
+    page.getByTestId('sidebar-primary-buttons'),
+  ).toMatchThemeScreenshots();
+  await purchasedItemsLink.click();
+  await expect(page.getByRole('main')).toContainText('No purchased items yet.');
 });
