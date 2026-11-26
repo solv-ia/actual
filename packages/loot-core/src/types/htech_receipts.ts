@@ -4,6 +4,11 @@ export type htech_ReceiptGroup = {
   sort_order: number;
 };
 
+export type htech_ProductType = {
+  id: string;
+  name: string;
+};
+
 export type htech_Product = {
   id: string;
   name: string;
@@ -11,6 +16,7 @@ export type htech_Product = {
   package_quantity: string | null;
   package_unit: string | null;
   default_group_id: string | null;
+  product_type_id: string | null;
 };
 
 export type htech_ProductBarcode = {
@@ -69,6 +75,8 @@ export type htech_ItemPurchase = Pick<
 > &
   Pick<htech_Receipt, 'transaction_id' | 'store' | 'purchased_at'> & {
     product_name: string | null;
+    product_type_id: string | null;
+    product_type_name: string | null;
     group_name: string | null;
     barcode: string | null;
   };

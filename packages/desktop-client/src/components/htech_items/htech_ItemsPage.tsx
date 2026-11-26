@@ -6,7 +6,10 @@ import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 import { send } from '@actual-app/core/platform/client/connection';
 import { integerToCurrency } from '@actual-app/core/shared/util';
-import type { htech_ItemPurchase } from '@actual-app/core/types/htech_receipts';
+import type {
+  htech_ItemPurchase,
+  htech_ProductType,
+} from '@actual-app/core/types/htech_receipts';
 
 import { FinancialText } from '#components/FinancialText';
 import { Page } from '#components/Page';
@@ -53,6 +56,10 @@ export function HtechItemsPage() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [items, setItems] = useState<htech_ItemPurchase[] | null>(null);
+  const [productTypes, setProductTypes] = useState<htech_ProductType[]>([]);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [savingProductId, setSavingProductId] = useState<string | null>(null);
+  const [isCreatingType, setIsCreatingType] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [filters, setFilters] = useState<htech_ItemFilters>(htech_emptyFilters);
@@ -62,10 +69,14 @@ export function HtechItemsPage() {
 
   useEffect(() => {
     let active = true;
-    send('htech_receipts_items_list')
-      .then(nextItems => {
+    Promise.all([
+      send('htech_receipts_items_list'),
+      send('htech_product_types_list'),
+    ])
+      .then(([nextItems, nextTypes]) => {
         if (active) {
           setItems(nextItems);
+          setProductTypes(nextTypes);
           setError(null);
         }
       })
@@ -103,6 +114,58 @@ export function HtechItemsPage() {
     setPage(0);
   }
 
+  async function htech_createType() {
+    const name = newTypeName.trim();
+    if (!name || isCreatingType) return;
+    setIsCreatingType(true);
+    try {
+      const type = await send('htech_product_types_create', { name });
+      setProductTypes(current =>
+        [...current, type].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      setNewTypeName('');
+      setError(null);
+    } catch {
+      setError(
+        t('Could not create product type. Check whether it already exists.'),
+      );
+    } finally {
+      setIsCreatingType(false);
+    }
+  }
+
+  async function htech_assignType(
+    productId: string,
+    productTypeId: string | null,
+  ) {
+    setSavingProductId(productId);
+    try {
+      await send('htech_products_assign_type', {
+        product_id: productId,
+        product_type_id: productTypeId,
+      });
+      const typeName =
+        productTypes.find(type => type.id === productTypeId)?.name ?? null;
+      setItems(
+        current =>
+          current?.map(item =>
+            item.product_id === productId
+              ? {
+                  ...item,
+                  product_type_id: productTypeId,
+                  product_type_name: typeName,
+                }
+              : item,
+          ) ?? null,
+      );
+      setError(null);
+    } catch {
+      setError(t('Could not update product type.'));
+    } finally {
+      setSavingProductId(null);
+    }
+  }
+
   return (
     <Page header={t('Purchased items')}>
       <View style={{ flex: 1, minHeight: 0, gap: 14, paddingTop: 16 }}>
@@ -118,7 +181,7 @@ export function HtechItemsPage() {
             <Trans>Search items</Trans>
             <input
               aria-label={t('Search items')}
-              placeholder={t('Name, product, store or barcode')}
+              placeholder={t('Name, type, store or barcode')}
               value={filters.search}
               onChange={event =>
                 htech_changeFilter('search', event.target.value)
@@ -166,6 +229,29 @@ export function HtechItemsPage() {
               ))}
             </select>
           </label>
+          <label style={{ display: 'grid', gap: 4, flex: '1 1 150px' }}>
+            <Trans>Product type</Trans>
+            <select
+              aria-label={t('Product type')}
+              value={filters.productType}
+              onChange={event =>
+                htech_changeFilter('productType', event.target.value)
+              }
+              style={htech_controlStyle}
+            >
+              <option value="">
+                <Trans>All product types</Trans>
+              </option>
+              <option value="__unassigned__">
+                <Trans>Unassigned</Trans>
+              </option>
+              {productTypes.map(type => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <label style={{ display: 'grid', gap: 4, flex: '1 1 170px' }}>
             <Trans>Order by</Trans>
             <select
@@ -193,6 +279,41 @@ export function HtechItemsPage() {
               </option>
             </select>
           </label>
+        </View>
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 8,
+            alignItems: 'end',
+          }}
+        >
+          <label
+            style={{
+              display: 'grid',
+              gap: 4,
+              flex: '1 1 180px',
+              maxWidth: 280,
+            }}
+          >
+            <Trans>New product type</Trans>
+            <input
+              value={newTypeName}
+              onChange={event => setNewTypeName(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') void htech_createType();
+              }}
+              placeholder={t('e.g. Olive oil')}
+              style={htech_controlStyle}
+            />
+          </label>
+          <Button
+            variant="bare"
+            isDisabled={!newTypeName.trim() || isCreatingType}
+            onPress={() => void htech_createType()}
+          >
+            <Trans>Add type</Trans>
+          </Button>
         </View>
         <View
           style={{
@@ -342,7 +463,7 @@ export function HtechItemsPage() {
               style={{
                 width: '100%',
                 borderCollapse: 'collapse',
-                minWidth: 860,
+                minWidth: 1000,
               }}
             >
               <thead>
@@ -370,6 +491,12 @@ export function HtechItemsPage() {
                     style={{ ...htech_cellStyle, textAlign: 'left' }}
                   >
                     <Trans>Group</Trans>
+                  </th>
+                  <th
+                    scope="col"
+                    style={{ ...htech_cellStyle, textAlign: 'left' }}
+                  >
+                    <Trans>Product type</Trans>
                   </th>
                   <th
                     scope="col"
@@ -427,6 +554,37 @@ export function HtechItemsPage() {
                     <td style={htech_cellStyle}>{item.store}</td>
                     <td style={htech_cellStyle}>
                       {item.group_name ?? t('Ungrouped')}
+                    </td>
+                    <td style={htech_cellStyle}>
+                      {item.product_id ? (
+                        <select
+                          aria-label={t('Product type for {{name}}', {
+                            name: item.printed_name,
+                          })}
+                          value={item.product_type_id ?? ''}
+                          disabled={savingProductId === item.product_id}
+                          onChange={event => {
+                            if (item.product_id) {
+                              void htech_assignType(
+                                item.product_id,
+                                event.target.value || null,
+                              );
+                            }
+                          }}
+                          style={htech_controlStyle}
+                        >
+                          <option value="">
+                            <Trans>Unassigned</Trans>
+                          </option>
+                          {productTypes.map(type => (
+                            <option key={type.id} value={type.id}>
+                              {type.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td style={htech_cellStyle}>{item.barcode ?? '—'}</td>
                     <td style={{ ...htech_cellStyle, textAlign: 'right' }}>

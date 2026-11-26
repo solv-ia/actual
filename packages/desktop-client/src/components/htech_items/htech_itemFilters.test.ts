@@ -13,6 +13,8 @@ const purchases: htech_ItemPurchase[] = [
     printed_name: 'PERSIL LESSIVE',
     product_id: 'p1',
     product_name: 'Persil detergent',
+    product_type_id: 'detergent',
+    product_type_name: 'Laundry detergent',
     group_id: 'cleaning',
     group_name: 'Cleaning',
     barcode: '123456',
@@ -31,6 +33,8 @@ const purchases: htech_ItemPurchase[] = [
     printed_name: 'PERSIL',
     product_id: 'p1',
     product_name: 'Persil detergent',
+    product_type_id: 'detergent',
+    product_type_name: 'Laundry detergent',
     group_id: 'cleaning',
     group_name: 'Cleaning',
     barcode: '123456',
@@ -49,6 +53,8 @@ const purchases: htech_ItemPurchase[] = [
     printed_name: 'PASTA',
     product_id: 'p2',
     product_name: 'Pasta',
+    product_type_id: 'pasta',
+    product_type_name: 'Pasta',
     group_id: 'food',
     group_name: 'Food',
     barcode: null,
@@ -71,6 +77,7 @@ describe('purchased item filters', () => {
         search: 'persil',
         store: 'Lidl',
         group: 'cleaning',
+        productType: 'detergent',
         barcode: '345',
         fromDate: '2026-11-01',
         toDate: '2026-11-30',
@@ -81,6 +88,16 @@ describe('purchased item filters', () => {
       'newest',
     );
     expect(result.map(item => item.id)).toEqual(['1']);
+  });
+
+  it('filters by product type across store-specific products', () => {
+    expect(
+      htech_filterAndSortItems(
+        purchases,
+        { ...htech_emptyFilters, productType: 'detergent' },
+        'newest',
+      ).map(item => item.id),
+    ).toEqual(['1', '2']);
   });
 
   it('orders prices across stores without changing the input list', () => {

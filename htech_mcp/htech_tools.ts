@@ -10,6 +10,7 @@ type HtechApi = typeof HtechApiModule;
 type HtechLineInput = {
   printed_name: string;
   product_name?: string;
+  product_type_name?: string;
   analysis_group?: string;
   kind?: 'item' | 'adjustment';
   barcode?: string;
@@ -38,6 +39,18 @@ type HtechMatchInput = {
 };
 
 type HtechReadInput = { transaction_id: string };
+
+type HtechListProductsInput = {
+  query?: string;
+  unassigned_only?: boolean;
+  offset?: number;
+  limit?: number;
+};
+
+type HtechAssignProductTypeInput = {
+  product_id: string;
+  product_type_id: string | null;
+};
 
 type HtechTool = {
   name: string;
@@ -116,6 +129,11 @@ export const htechTools: HtechTool[] = [
                 description:
                   'Canonical product name for cross-store price history; defaults to printed_name.',
               },
+              product_type_name: {
+                type: 'string',
+                description:
+                  'Existing product type, such as Olive oil or Whole milk. Leave out when uncertain.',
+              },
               analysis_group: {
                 type: 'string',
                 description:
@@ -159,6 +177,73 @@ export const htechTools: HtechTool[] = [
       additionalProperties: false,
       properties: { transaction_id: htechText },
       required: ['transaction_id'],
+    },
+  },
+  {
+    name: 'htech_list_product_types',
+    description:
+      'List product types used to group comparable products across stores. Read-only.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {},
+    },
+  },
+  {
+    name: 'htech_create_product_type',
+    description:
+      'Create a product type such as Olive oil, Whole milk, or Tomatoes. Writes.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: { name: htechText },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'htech_list_products',
+    description:
+      'List saved products and their product type assignments. Read-only; use this to get product IDs before assigning types.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Optional product name substring.',
+        },
+        unassigned_only: { type: 'boolean' },
+        offset: { type: 'integer', minimum: 0 },
+        limit: { type: 'integer', minimum: 1, maximum: 500 },
+      },
+    },
+  },
+  {
+    name: 'htech_assign_product_type',
+    description:
+      'Assign or clear a product type on one saved product. This changes every receipt item linked to that product, without changing prices or budget categories. Writes.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        product_id: htechText,
+        product_type_id: { anyOf: [htechText, { type: 'null' }] },
+      },
+      required: ['product_id', 'product_type_id'],
+    },
+  },
+  {
+    name: 'htech_product_type_prices',
+    description:
+      'List receipt prices across stores for one product type, including product names and package details. Read-only; compare like packages and units.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        product_type_id: htechText,
+        limit: { type: 'integer', minimum: 1, maximum: 500 },
+      },
+      required: ['product_type_id'],
     },
   },
 ];
@@ -325,11 +410,17 @@ async function htechReadReceipts(input: HtechReadInput) {
     'transaction_id',
   );
   return htechWithBudget(async api => {
-    const [receipts, groups] = await Promise.all([
+    const [receipts, groups, products, types] = await Promise.all([
       api.htech_getReceiptsForTransaction(transactionId),
       api.htech_getReceiptGroups(),
+      api.htech_getProducts(),
+      api.htech_getProductTypes(),
     ]);
     const groupNames = new Map(groups.map(group => [group.id, group.name]));
+    const productTypes = new Map(
+      products.map(product => [product.id, product.product_type_id]),
+    );
+    const typeNames = new Map(types.map(type => [type.id, type.name]));
     return {
       transaction_id: transactionId,
       receipts: receipts.map(receipt => ({
@@ -345,6 +436,12 @@ async function htechReadReceipts(input: HtechReadInput) {
           kind: line.kind,
           printed_name: line.printed_name,
           product_id: line.product_id,
+          product_type_id: line.product_id
+            ? (productTypes.get(line.product_id) ?? null)
+            : null,
+          product_type_name: line.product_id
+            ? (typeNames.get(productTypes.get(line.product_id) ?? '') ?? null)
+            : null,
           analysis_group: line.group_id
             ? (groupNames.get(line.group_id) ?? null)
             : null,
@@ -356,6 +453,128 @@ async function htechReadReceipts(input: HtechReadInput) {
           paid_cents: line.paid_cents,
         })),
       })),
+    };
+  });
+}
+
+async function htechListProductTypes() {
+  return htechWithBudget(api => api.htech_getProductTypes());
+}
+
+async function htechCreateProductType({ name }: { name: string }) {
+  const typeName = htechRequireText(name, 'name');
+  return htechWithBudget(async api => {
+    const type = await api.htech_createProductType(typeName);
+    if (!api.internal) throw new Error('Actual budget closed before sync');
+    await api.internal.send('sync');
+    return type;
+  });
+}
+
+async function htechListProducts(input: HtechListProductsInput) {
+  const offset = input.offset ?? 0;
+  const limit = input.limit ?? 100;
+  if (!Number.isInteger(offset) || offset < 0) {
+    throw new Error('offset must be a nonnegative integer');
+  }
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+    throw new Error('limit must be between 1 and 500');
+  }
+  const query = htechNormalize(input.query ?? '');
+  return htechWithBudget(async api => {
+    const [products, types] = await Promise.all([
+      api.htech_getProducts(),
+      api.htech_getProductTypes(),
+    ]);
+    const typeNames = new Map(types.map(type => [type.id, type.name]));
+    const matches = products.filter(
+      product =>
+        (!query || htechNormalize(product.name).includes(query)) &&
+        (!input.unassigned_only || !product.product_type_id),
+    );
+    return {
+      products: matches.slice(offset, offset + limit).map(product => ({
+        ...product,
+        product_type_name: product.product_type_id
+          ? (typeNames.get(product.product_type_id) ?? null)
+          : null,
+      })),
+      total: matches.length,
+      has_more: offset + limit < matches.length,
+    };
+  });
+}
+
+async function htechAssignProductType(input: HtechAssignProductTypeInput) {
+  const productId = htechRequireText(input.product_id, 'product_id');
+  const typeId =
+    input.product_type_id === null
+      ? null
+      : htechRequireText(input.product_type_id, 'product_type_id');
+  return htechWithBudget(async api => {
+    await api.htech_assignProductType(productId, typeId);
+    if (!api.internal) throw new Error('Actual budget closed before sync');
+    await api.internal.send('sync');
+    const product = (await api.htech_getProducts()).find(
+      candidate => candidate.id === productId,
+    );
+    if (product?.product_type_id !== typeId) {
+      throw new Error('Product type assignment could not be verified');
+    }
+    return {
+      product_id: productId,
+      product_type_id: typeId,
+    };
+  });
+}
+
+async function htechProductTypePrices({
+  product_type_id,
+  limit = 100,
+}: {
+  product_type_id: string;
+  limit?: number;
+}) {
+  const typeId = htechRequireText(product_type_id, 'product_type_id');
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+    throw new Error('limit must be between 1 and 500');
+  }
+  return htechWithBudget(async api => {
+    const type = (await api.htech_getProductTypes()).find(
+      candidate => candidate.id === typeId,
+    );
+    if (!type) throw new Error('Product type does not exist');
+    const products = new Map(
+      (await api.htech_getProducts()).map(product => [product.id, product]),
+    );
+    const matches = (await api.htech_getPurchasedItems()).filter(
+      item => item.product_type_id === typeId,
+    );
+    return {
+      product_type: type,
+      prices: matches.slice(0, limit).map(item => ({
+        store: item.store,
+        purchased_at: item.purchased_at,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        printed_name: item.printed_name,
+        brand: item.product_id
+          ? (products.get(item.product_id)?.brand ?? null)
+          : null,
+        package_quantity: item.product_id
+          ? (products.get(item.product_id)?.package_quantity ?? null)
+          : null,
+        package_unit: item.product_id
+          ? (products.get(item.product_id)?.package_unit ?? null)
+          : null,
+        quantity: item.quantity,
+        unit: item.unit,
+        unit_price_cents: item.unit_price_cents,
+        discount_cents: item.discount_cents,
+        paid_cents: item.paid_cents,
+      })),
+      total: matches.length,
+      has_more: matches.length > limit,
     };
   });
 }
@@ -428,6 +647,7 @@ async function htechSaveReceipt(input: HtechSaveInput) {
         line.product_name || printedName,
         `lines[${index}].product_name`,
       ),
+      productTypeName: line.product_type_name?.trim() || null,
       groupName: line.analysis_group?.trim() || null,
       kind,
       barcode: line.barcode?.trim() || null,
@@ -496,6 +716,7 @@ async function htechSaveReceipt(input: HtechSaveInput) {
     }
     const groups = await api.htech_getReceiptGroups();
     const products = await api.htech_getProducts();
+    const types = await api.htech_getProductTypes();
     const barcodes = await api.htech_getProductBarcodes();
     const savedLines = [];
     for (const line of lines) {
@@ -519,6 +740,16 @@ async function htechSaveReceipt(input: HtechSaveInput) {
         candidate =>
           htechNormalize(candidate.name) === htechNormalize(line.productName),
       );
+      const productType = line.productTypeName
+        ? types.find(
+            candidate =>
+              htechNormalize(candidate.name) ===
+              htechNormalize(line.productTypeName!),
+          )
+        : null;
+      if (line.productTypeName && !productType) {
+        throw new Error(`Unknown product type: ${line.productTypeName}`);
+      }
       if (!product) {
         product = {
           id: randomUUID(),
@@ -527,9 +758,18 @@ async function htechSaveReceipt(input: HtechSaveInput) {
           package_quantity: null,
           package_unit: null,
           default_group_id: group?.id ?? null,
+          product_type_id: productType?.id ?? null,
         };
         await api.htech_saveProduct(product);
         products.push(product);
+      } else if (productType && product.product_type_id !== productType.id) {
+        if (product.product_type_id) {
+          throw new Error(
+            `Product ${product.name} has a different product type`,
+          );
+        }
+        await api.htech_assignProductType(product.id, productType.id);
+        product.product_type_id = productType.id;
       }
       const existingBarcode = line.barcode
         ? barcodes.find(
@@ -614,6 +854,23 @@ export async function htechCall(name: string, args: unknown): Promise<unknown> {
   }
   if (name === 'htech_get_receipts') {
     return htechReadReceipts(input as HtechReadInput);
+  }
+  if (name === 'htech_list_product_types') {
+    return htechListProductTypes();
+  }
+  if (name === 'htech_create_product_type') {
+    return htechCreateProductType(input as { name: string });
+  }
+  if (name === 'htech_list_products') {
+    return htechListProducts(input as HtechListProductsInput);
+  }
+  if (name === 'htech_assign_product_type') {
+    return htechAssignProductType(input as HtechAssignProductTypeInput);
+  }
+  if (name === 'htech_product_type_prices') {
+    return htechProductTypePrices(
+      input as { product_type_id: string; limit?: number },
+    );
   }
   throw new Error(`Unknown htech tool: ${name}`);
 }
