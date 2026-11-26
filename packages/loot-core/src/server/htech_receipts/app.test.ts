@@ -54,6 +54,7 @@ describe('htech receipts', () => {
       package_quantity: '500',
       package_unit: 'ml',
       default_group_id: 'cleaning',
+      product_type_id: null,
     });
     await htech_app.handlers.htech_product_barcodes_save({
       id: 'barcode-1',
@@ -146,6 +147,47 @@ describe('htech receipts', () => {
         transaction_id,
       }),
     ).toEqual([]);
+  });
+
+  it('assigns a product type to existing purchases without changing their prices', async () => {
+    const transaction_id = await htech_makeTransaction();
+    await htech_app.handlers.htech_products_save({
+      id: 'product-1',
+      name: 'Organic olive oil, 75 cl',
+      brand: null,
+      package_quantity: '75',
+      package_unit: 'cl',
+      default_group_id: null,
+      product_type_id: null,
+    });
+    const receipt = htech_makeReceipt(transaction_id);
+    receipt.lines[0].group_id = null;
+    await htech_app.handlers.htech_receipts_save(receipt);
+
+    const type = await htech_app.handlers.htech_product_types_create({
+      name: 'Olive oil',
+    });
+    await htech_app.handlers.htech_products_assign_type({
+      product_id: 'product-1',
+      product_type_id: type.id,
+    });
+    expect(await htech_app.handlers.htech_receipts_items_list()).toEqual([
+      expect.objectContaining({
+        product_id: 'product-1',
+        product_type_id: type.id,
+        product_type_name: 'Olive oil',
+        paid_cents: 500,
+      }),
+    ]);
+    await expect(
+      htech_app.handlers.htech_product_types_create({ name: 'olive oil' }),
+    ).rejects.toThrow('already exists');
+    await expect(
+      htech_app.handlers.htech_products_assign_type({
+        product_id: 'product-1',
+        product_type_id: 'missing',
+      }),
+    ).rejects.toThrow('does not exist');
   });
 
   it('replaces lines without duplicating a retried receipt', async () => {

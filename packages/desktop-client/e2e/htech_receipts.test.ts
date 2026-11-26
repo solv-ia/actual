@@ -31,6 +31,9 @@ test('opens the purchased items page and its filters', async ({ page }) => {
   await configuration.createTestFile();
   await page.getByRole('link', { name: 'Purchased items' }).click();
   await expect(page.getByRole('main')).toContainText('No purchased items yet.');
+  await page.getByLabel('New product type').fill('Olive oil');
+  await page.getByRole('button', { name: 'Add type' }).click();
+  await expect(page.getByLabel('Product type')).toContainText('Olive oil');
   await page.getByRole('button', { name: 'Advanced filters' }).click();
   await expect(page.getByLabel('Barcode contains')).toBeVisible();
   await expect(page.getByRole('main')).toMatchThemeScreenshots();

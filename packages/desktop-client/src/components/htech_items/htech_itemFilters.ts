@@ -4,6 +4,7 @@ export type htech_ItemFilters = {
   search: string;
   store: string;
   group: string;
+  productType: string;
   barcode: string;
   fromDate: string;
   toDate: string;
@@ -25,6 +26,7 @@ export const htech_emptyFilters: htech_ItemFilters = {
   search: '',
   store: '',
   group: '',
+  productType: '',
   barcode: '',
   fromDate: '',
   toDate: '',
@@ -55,14 +57,31 @@ export function htech_filterAndSortItems(
     .filter(item => {
       if (
         search &&
-        ![item.printed_name, item.product_name, item.store, item.barcode].some(
-          value => value?.toLocaleLowerCase().includes(search),
-        )
+        ![
+          item.printed_name,
+          item.product_name,
+          item.product_type_name,
+          item.store,
+          item.barcode,
+        ].some(value => value?.toLocaleLowerCase().includes(search))
       ) {
         return false;
       }
       if (filters.store && item.store !== filters.store) return false;
       if (filters.group && item.group_id !== filters.group) return false;
+      if (
+        filters.productType === '__unassigned__' &&
+        item.product_type_id !== null
+      ) {
+        return false;
+      }
+      if (
+        filters.productType &&
+        filters.productType !== '__unassigned__' &&
+        item.product_type_id !== filters.productType
+      ) {
+        return false;
+      }
       if (barcode && !item.barcode?.includes(barcode)) return false;
       if (filters.fromDate && item.purchased_at < filters.fromDate) {
         return false;

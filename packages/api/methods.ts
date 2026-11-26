@@ -48,6 +48,21 @@ export function htech_getProducts() {
   return send('htech_products_list');
 }
 
+export function htech_getProductTypes() {
+  return send('htech_product_types_list');
+}
+
+export function htech_createProductType(name: string) {
+  return send('htech_product_types_create', { name });
+}
+
+export function htech_assignProductType(
+  product_id: string,
+  product_type_id: string | null,
+) {
+  return send('htech_products_assign_type', { product_id, product_type_id });
+}
+
 export function htech_saveProduct(product: htech_Product) {
   return send('htech_products_save', product);
 }

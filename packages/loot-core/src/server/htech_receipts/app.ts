@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid';
+
 import { createApp } from '#server/app';
 import * as db from '#server/db';
 import { mutator } from '#server/mutators';
@@ -7,6 +9,7 @@ import type {
   htech_PriceHistoryRow,
   htech_Product,
   htech_ProductBarcode,
+  htech_ProductType,
   htech_Receipt,
   htech_ReceiptGroup,
   htech_ReceiptLine,
@@ -20,6 +23,9 @@ export type htech_ReceiptHandlers = {
   htech_receipt_groups_save: typeof htech_receipt_groups_save;
   htech_products_list: typeof htech_products_list;
   htech_products_save: typeof htech_products_save;
+  htech_product_types_list: typeof htech_product_types_list;
+  htech_product_types_create: typeof htech_product_types_create;
+  htech_products_assign_type: typeof htech_products_assign_type;
   htech_product_barcodes_list: typeof htech_product_barcodes_list;
   htech_product_barcodes_save: typeof htech_product_barcodes_save;
   htech_receipts_save: typeof htech_receipts_save;
@@ -37,6 +43,15 @@ htech_app.method(
 );
 htech_app.method('htech_products_list', htech_products_list);
 htech_app.method('htech_products_save', mutator(htech_products_save));
+htech_app.method('htech_product_types_list', htech_product_types_list);
+htech_app.method(
+  'htech_product_types_create',
+  mutator(htech_product_types_create),
+);
+htech_app.method(
+  'htech_products_assign_type',
+  mutator(htech_products_assign_type),
+);
 htech_app.method('htech_product_barcodes_list', htech_product_barcodes_list);
 htech_app.method(
   'htech_product_barcodes_save',
@@ -70,7 +85,8 @@ function htech_requireCents(value: number, field: string): void {
 async function htech_receipts_items_list(): Promise<htech_ItemPurchase[]> {
   return db.all<htech_ItemPurchase>(
     `SELECT l.id, l.receipt_id, r.transaction_id, l.printed_name, l.product_id,
-            p.name AS product_name, l.group_id, g.name AS group_name,
+            p.name AS product_name, p.product_type_id, pt.name AS product_type_name,
+            l.group_id, g.name AS group_name,
             COALESCE(l.barcode, (
               SELECT b.code FROM htech_product_barcodes b
               WHERE b.product_id = l.product_id AND b.tombstone = 0
@@ -84,6 +100,7 @@ async function htech_receipts_items_list(): Promise<htech_ItemPurchase[]> {
        JOIN htech_receipts r ON r.id = l.receipt_id AND r.tombstone = 0
        JOIN transactions t ON t.id = r.transaction_id AND t.tombstone = 0
        LEFT JOIN htech_products p ON p.id = l.product_id AND p.tombstone = 0
+       LEFT JOIN htech_product_types pt ON pt.id = p.product_type_id AND pt.tombstone = 0
        LEFT JOIN htech_receipt_groups g ON g.id = l.group_id AND g.tombstone = 0
       WHERE l.tombstone = 0 AND l.kind = 'item'
       ORDER BY r.purchased_at DESC, r.id, l.position, l.id`,
@@ -107,9 +124,61 @@ async function htech_receipt_groups_save(
 
 async function htech_products_list(): Promise<htech_Product[]> {
   return db.all<htech_Product>(
-    `SELECT id, name, brand, package_quantity, package_unit, default_group_id
+    `SELECT id, name, brand, package_quantity, package_unit, default_group_id, product_type_id
        FROM htech_products WHERE tombstone = 0 ORDER BY name, id`,
   );
+}
+
+async function htech_product_types_list(): Promise<htech_ProductType[]> {
+  return db.all<htech_ProductType>(
+    'SELECT id, name FROM htech_product_types WHERE tombstone = 0 ORDER BY name, id',
+  );
+}
+
+async function htech_product_types_create({
+  name,
+}: {
+  name: string;
+}): Promise<htech_ProductType> {
+  const trimmedName = htech_requireText(name, 'name');
+  const existing = await db.first<{ id: string }>(
+    'SELECT id FROM htech_product_types WHERE name = ? COLLATE NOCASE AND tombstone = 0',
+    [trimmedName],
+  );
+  if (existing) {
+    throw new Error('Product type already exists');
+  }
+  const type = { id: uuidv4(), name: trimmedName };
+  await db.update('htech_product_types', { ...type, tombstone: 0 });
+  return type;
+}
+
+async function htech_products_assign_type({
+  product_id,
+  product_type_id,
+}: {
+  product_id: string;
+  product_type_id: string | null;
+}): Promise<string> {
+  htech_requireText(product_id, 'product_id');
+  const product = await db.first<{ id: string }>(
+    'SELECT id FROM htech_products WHERE id = ? AND tombstone = 0',
+    [product_id],
+  );
+  if (!product) {
+    throw new Error('Product does not exist');
+  }
+  if (product_type_id) {
+    const type = await db.first<{ id: string }>(
+      'SELECT id FROM htech_product_types WHERE id = ? AND tombstone = 0',
+      [product_type_id],
+    );
+    if (!type) {
+      throw new Error('Product type does not exist');
+    }
+  }
+  await db.update('htech_products', { id: product_id, product_type_id });
+  return product_id;
 }
 
 async function htech_products_save(product: htech_Product): Promise<string> {
@@ -122,6 +191,15 @@ async function htech_products_save(product: htech_Product): Promise<string> {
     );
     if (!group) {
       throw new Error('Product group does not exist');
+    }
+  }
+  if (product.product_type_id) {
+    const type = await db.first<{ id: string }>(
+      'SELECT id FROM htech_product_types WHERE id = ? AND tombstone = 0',
+      [product.product_type_id],
+    );
+    if (!type) {
+      throw new Error('Product type does not exist');
     }
   }
   await db.update('htech_products', { ...product, tombstone: 0 });
